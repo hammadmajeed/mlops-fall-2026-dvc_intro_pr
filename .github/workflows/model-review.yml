@@ -1,0 +1,51 @@
+name: DVC Model Review
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  review:
+    # For classroom PRs made from branches in the same repository.
+    # Fork PRs do not receive write tokens by default.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Unit tests
+        run: python -m pytest -q
+      - name: Reproduce the candidate DVC pipeline
+        run: dvc repro
+      - name: Verify tracked results are reproducible
+        run: |
+          git diff --exit-code -- dvc.lock metrics.json plots/roc.csv
+      - name: Generate comparative report and enforce policy
+        id: quality
+        continue-on-error: true
+        run: |
+          git fetch origin "${{ github.base_ref }}"
+          python -m src.pr_report --base-ref "origin/${{ github.base_ref }}"
+      - uses: iterative/setup-cml@v2
+        with:
+          vega: false
+      - name: Post ROC plot and metrics to PR
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cml comment update --publish report.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model-review
+          path: |
+            report.md
+            reports/roc_comparison.png
+            metrics.json
+      - name: Enforce quality gate
+        if: steps.quality.outcome == 'failure'
+        run: exit 1

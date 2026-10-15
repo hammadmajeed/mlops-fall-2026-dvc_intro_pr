@@ -1,0 +1,33 @@
+stages:
+  generate:
+    cmd: python src/generate.py
+    deps:
+      - src/generate.py
+    params:
+      - data
+    outs:
+      - data/dataset.csv
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - data/dataset.csv
+    params:
+      - train
+    outs:
+      - models/model.pkl
+      - data/test.csv
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - models/model.pkl
+      - data/test.csv
+    metrics:
+      - metrics.json:
+          cache: false
+    plots:
+      - plots/roc.csv:
+          cache: false
+          x: fpr
+          y: tpr

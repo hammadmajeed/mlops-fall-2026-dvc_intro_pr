@@ -1,0 +1,12 @@
+data:
+  n_samples: 1200
+  random_state: 42
+train:
+  max_depth: 1
+  n_estimators: 100
+  random_state: 42
+  test_size: 0.25
+policy:
+  min_accuracy: 0.75
+  max_accuracy_drop: 0.01
+  max_auc_drop: 0.01
